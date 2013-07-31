@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.vertx.java.core.AsyncResult;
+import org.vertx.java.core.Future;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.impl.JsonObjectMessage;
 import org.vertx.java.core.json.JsonObject;
@@ -16,17 +18,25 @@ public class ChatVerticle extends Verticle {
   private final CopyOnWriteArrayList<JsonObject> messages = new CopyOnWriteArrayList<>();
 
   @Override
-  public void start() {
+  public void start(final Future<Void> startedResult) {
+    start();
+
     Map<String, Object> serverConfig = new HashMap<>();
     serverConfig.put("web_root", "src/main/webapp");
     serverConfig.put("port", 8080);
     serverConfig.put("bridge", true);
+    serverConfig.put("route_matcher", true);
     serverConfig.put("inbound_permitted", asList(new HashMap<String, Object>()));
     serverConfig.put("outbound_permitted", asList(new HashMap<String, Object>()));
     HashMap<String, Object> sjsConfig = new HashMap<>();
     sjsConfig.put("prefix", "/chat");
     serverConfig.put("sjs_config", sjsConfig);
-    container.deployModule("io.vertx~mod-web-server~2.0.0-final", new JsonObject(serverConfig));
+    container.deployVerticle("com.moandjiezana.vertx.webjars.WebJarsServer", new JsonObject(serverConfig), new Handler<AsyncResult<String>>() {
+      @Override
+      public void handle(AsyncResult<String> event) {
+        startedResult.setResult(null);
+      }
+    });
 
     vertx.eventBus().registerHandler("users/signIn", new Handler<JsonObjectMessage>() {
       @Override
