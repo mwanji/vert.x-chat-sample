@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <script src="http://cdn.sockjs.org/sockjs-0.3.4.min.js"></script>
+  <script src="vertxbus.min.js"></script>
+  <script>
+  window.onload = function () {
+	  var eventBus = new vertx.EventBus("http://localhost:8080/chat");
+	  var userName = document.querySelector("input[name=userName]");
+	  var userListContainer = document.getElementById("userListContainer");
+	  var chatContainer = document.getElementById("chatContainer");
+	  var chatHistory = document.getElementById("chatHistory");
+	  var newChat = document.getElementById("newChat");
+	  
+	  eventBus.onopen = function () {
+		  eventBus.registerHandler("users/signedIn", function (message) {
+			  userListContainer.innerHTML += message.userName + " signed in<br/>";
+		  });
+
+		  document.getElementById("signIn").addEventListener("click", function (event) {
+			  eventBus.send("users/signIn", { userName: userName.value }, function (reply) {
+				  if (reply.status === 200) {
+					  userName.disabled = true;
+					  event.target.disabled = true;
+					  chatContainer.classList.remove("hidden");
+					  
+					  document.getElementById("sendChat").addEventListener("click", function () {
+						  var text = newChat.value;
+						  eventBus.send("messages/post", { userName: userName.value, text: text });
+						  newChat.value = "";
+					  }, false);
+					  
+					  eventBus.registerHandler("messages/posted", function (message) {
+						  chatHistory.innerHTML += message.userName + ": " + message.text + "<br/>";
+					  });
+				  }
+			  });  
+		  }, false);
+	  };
+  };
+  </script>
+  <style>
+    .hidden {
+      display: none;
+    }
+  </style>
+  <body>
+    <h1>vert.x Chat</h1>
+    
+    <div id="signInContainer">
+      <h2>Sign in</h2>
+      <p>
+        Name: <input type="text" name="userName" /> <button id="signIn">Start chatting</button>
+      </p>
+    </div>
+    
+    <div id="userListContainer"></div>
+    
+    <div id="chatContainer" class="hidden">
+      <h2>Chat</h2>
+      <div id="chatHistory"></div>
+      <input type="text" id="newChat" /> <button id="sendChat">Send</button>
+    </div>
+  </body>
+</html>
